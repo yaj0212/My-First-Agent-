@@ -1,0 +1,10 @@
+langchain
+langchain-anthropic
+langgraph
+deepagents
+langchain-mcp-adapters
+python-dotenv
+reportlab
+python-docx
+openpyxl
+nbformat
