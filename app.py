@@ -1,7 +1,7 @@
 import gradio as gr
 from agent import chat
 
-def respond(message, history, thread_id):
+def respond(message, history, thread_id="default"):
     if not thread_id.strip():
         thread_id = "default"
     try:
@@ -33,7 +33,6 @@ with gr.Blocks(title="My First Agent") as demo:
             ["Write a Word document with a simple cover letter template"],
             ["Create a Jupyter notebook with two cells: one that imports pandas, one that prints Hello World"],
         ],
-        type="messages",
     )
 
 if __name__ == "__main__":
