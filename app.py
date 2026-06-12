@@ -8,38 +8,21 @@ TEMP_DIR = os.path.join(tempfile.gettempdir(), "my-first-agent")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 EXAMPLES = [
-    ("🐍 Python", "Write a Python script that prints the Fibonacci sequence"),
-    ("📊 CSV", "Generate a CSV with columns Name, Age, City and 3 sample rows"),
-    ("📝 Markdown", "Create a Markdown README template for a Python project"),
+    ("🐍 Python script", "Write a Python script that prints the Fibonacci sequence"),
+    ("📊 CSV file", "Generate a CSV with columns Name, Age, City and 3 sample rows"),
+    ("📝 Markdown doc", "Create a Markdown README template for a Python project"),
     ("📄 PDF", "Generate a PDF with a short intro about AI agents"),
-    ("📈 Excel", "Create an Excel file tracking monthly expenses with 5 rows"),
-    ("📃 Word", "Write a Word document with a simple cover letter template"),
-    ("📓 Jupyter", "Create a Jupyter notebook that imports pandas and prints Hello World"),
+    ("📈 Excel sheet", "Create an Excel file tracking monthly expenses with 5 rows"),
+    ("📃 Word doc", "Write a Word document with a simple cover letter template"),
+    ("📓 Jupyter notebook", "Create a Jupyter notebook that imports pandas and prints Hello World"),
 ]
-
-PLACEHOLDER_HTML = """
-<div style="display:flex; flex-direction:column; align-items:center; justify-content:center;
-            height:100%; padding: 40px 20px; gap: 20px; color:#555;">
-  <div style="font-size:2rem;">🤖</div>
-  <div style="font-size:1.1rem; font-weight:600; color:#333;">What would you like to create?</div>
-  <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:680px;">
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">🐍 Python script</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📊 CSV file</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📝 Markdown doc</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📄 PDF</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📈 Excel sheet</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📃 Word doc</span>
-    <span style="padding:8px 14px;border:1px solid #ddd;border-radius:20px;font-size:0.85rem;background:#f9f9f9;">📓 Jupyter notebook</span>
-  </div>
-  <div style="font-size:0.8rem;color:#aaa;">Click an example below or type your own request</div>
-</div>
-"""
 
 
 def respond(message, history, thread_id, known_files):
     thread_id = (thread_id or "").strip() or "default"
     if not message or not message.strip():
-        return history, known_files, known_files, gr.update(visible=False)
+        return (history, known_files, known_files,
+                gr.update(visible=False), gr.update(visible=True))
 
     before = set(os.listdir(TEMP_DIR))
     try:
@@ -61,11 +44,15 @@ def respond(message, history, thread_id, known_files):
         {"role": "user", "content": message},
         {"role": "assistant", "content": response},
     ]
-    return history, updated_files, updated_files, gr.update(visible=False)
+    # Hide welcome panel, show chatbot
+    return (history, updated_files, updated_files,
+            gr.update(visible=False), gr.update(visible=True))
 
 
 def new_session(known_files):
-    return [], str(uuid.uuid4())[:8], known_files, gr.update(visible=True)
+    # Show welcome panel, hide chatbot
+    return ([], str(uuid.uuid4())[:8], known_files,
+            gr.update(visible=True), gr.update(visible=False))
 
 
 with gr.Blocks(title="My First Agent") as demo:
@@ -82,10 +69,22 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    chatbot = gr.Chatbot(label="Chat", height=420, placeholder=PLACEHOLDER_HTML)
+    # Welcome panel — shown when chat is empty
+    with gr.Column(visible=True) as welcome_panel:
+        gr.HTML("""
+        <div style="border:1px solid #e5e7eb; border-radius:8px; height:420px;
+                    display:flex; flex-direction:column; align-items:center;
+                    justify-content:center; gap:20px; background:#fff; padding:32px;">
+          <div style="font-size:2rem;">🤖</div>
+          <div style="font-size:1.15rem; font-weight:600; color:#111;">What would you like to create?</div>
+          <div style="font-size:0.85rem; color:#888;">Click an option to get started</div>
+        </div>
+        """)
+        with gr.Row():
+            btns = [gr.Button(label, variant="secondary", scale=1) for label, _ in EXAMPLES]
 
-    with gr.Row(visible=True) as example_row:
-        btns = [gr.Button(label, size="sm", variant="secondary", scale=1) for label, _ in EXAMPLES]
+    # Chatbot — hidden until first message
+    chatbot = gr.Chatbot(label="Chat", height=420, visible=False)
 
     with gr.Row():
         msg_box = gr.Textbox(
@@ -104,25 +103,30 @@ with gr.Blocks(title="My First Agent") as demo:
             interactive=False,
         )
 
+    # Example buttons fill the message box and auto-submit
     for btn, (_, prompt) in zip(btns, EXAMPLES):
-        btn.click(fn=lambda p=prompt: p, outputs=msg_box)
+        btn.click(fn=lambda p=prompt: p, outputs=msg_box).then(
+            fn=respond,
+            inputs=[msg_box, chatbot, thread_input, file_state],
+            outputs=[chatbot, file_state, file_output, welcome_panel, chatbot],
+        ).then(fn=lambda: "", outputs=msg_box)
 
     send_btn.click(
         fn=respond,
         inputs=[msg_box, chatbot, thread_input, file_state],
-        outputs=[chatbot, file_state, file_output, example_row],
+        outputs=[chatbot, file_state, file_output, welcome_panel, chatbot],
     ).then(fn=lambda: "", outputs=msg_box)
 
     msg_box.submit(
         fn=respond,
         inputs=[msg_box, chatbot, thread_input, file_state],
-        outputs=[chatbot, file_state, file_output, example_row],
+        outputs=[chatbot, file_state, file_output, welcome_panel, chatbot],
     ).then(fn=lambda: "", outputs=msg_box)
 
     new_btn.click(
         fn=new_session,
         inputs=[file_state],
-        outputs=[chatbot, thread_input, file_output, example_row],
+        outputs=[chatbot, thread_input, file_output, welcome_panel, chatbot],
     )
 
 if __name__ == "__main__":
