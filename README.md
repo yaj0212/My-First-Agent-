@@ -10,7 +10,10 @@ A conversational AI agent built with **LangChain**, **LangGraph**, and **Deep Ag
   - CSV
   - Markdown
   - Python scripts
-  - *(more coming: PDF, DOCX, XLSX, .ipynb)*
+  - PDF (via reportlab)
+  - Excel / XLSX (via openpyxl)
+  - Word / DOCX (via python-docx)
+  - Jupyter Notebooks / .ipynb (via nbformat)
 - Platform integrations via MCP *(coming soon: Gmail, GitHub, LinkedIn, etc.)*
 
 ## Tech Stack
@@ -100,7 +103,7 @@ Generated files are saved to the `output/` folder.
 
 ## Roadmap
 
-- [ ] PDF, DOCX, XLSX, `.ipynb` generation
+- [x] PDF, DOCX, XLSX, `.ipynb` generation
 - [ ] Gmail integration
 - [ ] GitHub integration
 - [ ] LinkedIn integration

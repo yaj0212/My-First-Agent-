@@ -5,22 +5,47 @@ load_dotenv()
 
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, MessagesState, START, END
+from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
-from tools.file_tools import generate_csv, generate_markdown, generate_python_file
+from tools.file_tools import (
+    generate_csv,
+    generate_markdown,
+    generate_python_file,
+    generate_pdf,
+    generate_excel,
+    generate_word_doc,
+    generate_notebook,
+)
 
+SYSTEM = SystemMessage(content=(
+    "You are a helpful file-generation assistant. "
+    "You can create CSV, Markdown, Python scripts, PDF, Excel, Word documents, and Jupyter notebooks on request. "
+    "Always confirm what you created and the path where it was saved. "
+    "If a request is ambiguous, ask a clarifying question before generating the file."
+))
+
+model_name = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 llm = ChatAnthropic(
-    model="claude-sonnet-4-6",
+    model=model_name,
     api_key=os.environ["ANTHROPIC_API_KEY"],
 )
 
-tools = [generate_csv, generate_markdown, generate_python_file]
+tools = [
+    generate_csv,
+    generate_markdown,
+    generate_python_file,
+    generate_pdf,
+    generate_excel,
+    generate_word_doc,
+    generate_notebook,
+]
 llm_with_tools = llm.bind_tools(tools)
 
 
 def call_model(state: MessagesState):
-    response = llm_with_tools.invoke(state["messages"])
+    response = llm_with_tools.invoke([SYSTEM] + state["messages"])
     return {"messages": [response]}
 
 
@@ -30,8 +55,6 @@ def should_continue(state: MessagesState):
         return "tools"
     return END
 
-
-from langgraph.prebuilt import ToolNode
 
 tool_node = ToolNode(tools)
 
@@ -46,7 +69,7 @@ memory = MemorySaver()
 app = graph.compile(checkpointer=memory)
 
 
-def chat(user_input: str, thread_id: str = "default"):
+def chat(user_input: str, thread_id: str = "default") -> str:
     config = {"configurable": {"thread_id": thread_id}}
     result = app.invoke(
         {"messages": [HumanMessage(content=user_input)]},
@@ -58,10 +81,17 @@ def chat(user_input: str, thread_id: str = "default"):
 if __name__ == "__main__":
     print("Agent ready. Type 'quit' to exit.\n")
     while True:
-        user_input = input("You: ").strip()
+        try:
+            user_input = input("You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye!")
+            break
         if user_input.lower() in ("quit", "exit"):
             break
         if not user_input:
             continue
-        response = chat(user_input)
-        print(f"Agent: {response}\n")
+        try:
+            response = chat(user_input)
+            print(f"Agent: {response}\n")
+        except Exception as e:
+            print(f"Error: {e}\n")

@@ -1,1 +1,25 @@
-404: Not Found
+# Environment
+.env
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Generated output files (keep the folder, ignore contents)
+output/*
+!output/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
