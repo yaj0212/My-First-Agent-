@@ -15,9 +15,8 @@ __pycache__/
 dist/
 build/
 
-# Generated output files (keep the folder, ignore contents)
-output/*
-!output/.gitkeep
+# Generated output files (written to system temp dir at runtime, not committed)
+output/
 
 # IDE
 .vscode/

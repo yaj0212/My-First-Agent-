@@ -1,30 +1,52 @@
 import os
+import re
 import uuid
+import tempfile
 import gradio as gr
 from agent import chat
 
-OUTPUT_DIR = os.path.abspath("output")
+TEMP_DIR = os.path.join(tempfile.gettempdir(), "my-first-agent")
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+# Parse FILE_SAVED: paths out of agent response
+FILE_SAVED_RE = re.compile(r"FILE_SAVED:(\S+)")
 
 
-def respond(message, history, thread_id):
+def extract_files(text: str):
+    return FILE_SAVED_RE.findall(text)
+
+
+def clean_response(text: str) -> str:
+    return FILE_SAVED_RE.sub("", text).strip()
+
+
+def respond(message, history, thread_id, known_files):
     thread_id = (thread_id or "").strip() or "default"
     try:
-        response = chat(message, thread_id=thread_id)
+        raw = chat(message, thread_id=thread_id)
     except Exception as e:
-        response = f"Error: {e}"
-    return response
+        raw = f"Error: {e}"
+
+    new_paths = extract_files(raw)
+    response = clean_response(raw)
+
+    if new_paths:
+        names = [os.path.basename(p) for p in new_paths]
+        response += f"\n\n**File ready to download:** {', '.join(names)}  \nClick the filename in the Download panel below."
+
+    updated_files = known_files + [p for p in new_paths if os.path.exists(p)]
+    history = history + [[message, response]]
+    return history, updated_files, updated_files
 
 
-def new_session():
-    return [], str(uuid.uuid4())[:8]
+def new_session(known_files):
+    return [], str(uuid.uuid4())[:8], known_files
 
 
 with gr.Blocks(title="My First Agent") as demo:
-    gr.Markdown(
-        f"# My First Agent\n"
-        f"Chat with your agent. It can show code directly in the chat **and** save files to:\n\n"
-        f"`{OUTPUT_DIR}`"
-    )
+    gr.Markdown("# My First Agent\nChat with your agent. Files are generated in chat first — download them when you're ready.")
+
+    file_state = gr.State([])
 
     with gr.Row():
         thread_input = gr.Textbox(
@@ -35,24 +57,56 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    chatbot = gr.Chatbot(label="Chatbot", height=480)
+    chatbot = gr.Chatbot(label="Chat", height=480, show_copy_button=True)
 
-    chat_ui = gr.ChatInterface(
-        fn=respond,
-        chatbot=chatbot,
-        additional_inputs=[thread_input],
+    with gr.Row():
+        msg_box = gr.Textbox(
+            placeholder="Ask me to generate any file, or just chat...",
+            label="",
+            scale=5,
+            lines=1,
+        )
+        send_btn = gr.Button("Send", scale=1, variant="primary")
+
+    gr.Examples(
         examples=[
-            ["Write a Python script that prints the Fibonacci sequence"],
-            ["Generate a CSV with columns Name, Age, City and 3 sample rows"],
-            ["Create a Markdown file with a project README template"],
-            ["Generate a PDF with a short introduction about AI agents"],
-            ["Create an Excel file tracking monthly expenses with 5 rows"],
-            ["Write a Word document with a simple cover letter template"],
-            ["Create a Jupyter notebook with two cells: one that imports pandas, one that prints Hello World"],
+            "Write a Python script that prints the Fibonacci sequence",
+            "Generate a CSV with columns Name, Age, City and 3 sample rows",
+            "Create a Markdown README template for a Python project",
+            "Generate a PDF with a short introduction about AI agents",
+            "Create an Excel file tracking monthly expenses with 5 rows",
+            "Write a Word document with a simple cover letter template",
+            "Create a Jupyter notebook that imports pandas and prints Hello World",
         ],
+        inputs=msg_box,
     )
 
-    new_btn.click(fn=new_session, outputs=[chatbot, thread_input])
+    gr.Markdown("### Downloads")
+    gr.Markdown("Generated files appear here. Click a filename to download it to your Downloads folder.")
+    file_output = gr.File(
+        label="Generated files",
+        file_count="multiple",
+        interactive=False,
+    )
+
+    # Send on button click or Enter
+    send_btn.click(
+        fn=respond,
+        inputs=[msg_box, chatbot, thread_input, file_state],
+        outputs=[chatbot, file_state, file_output],
+    ).then(fn=lambda: "", outputs=msg_box)
+
+    msg_box.submit(
+        fn=respond,
+        inputs=[msg_box, chatbot, thread_input, file_state],
+        outputs=[chatbot, file_state, file_output],
+    ).then(fn=lambda: "", outputs=msg_box)
+
+    new_btn.click(
+        fn=new_session,
+        inputs=[file_state],
+        outputs=[chatbot, thread_input, file_output],
+    )
 
 if __name__ == "__main__":
     demo.launch()

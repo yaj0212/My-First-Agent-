@@ -1,8 +1,9 @@
 import csv
 import os
+import tempfile
 from langchain_core.tools import tool
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = os.path.join(tempfile.gettempdir(), "my-first-agent")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
@@ -24,7 +25,7 @@ def generate_csv(filename: str, headers: list[str], rows: list[list]) -> str:
         writer = csv.writer(f)
         writer.writerow(headers)
         writer.writerows(rows)
-    return f"CSV saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
@@ -37,7 +38,7 @@ def generate_markdown(filename: str, content: str) -> str:
     path = _make_path(filename, ".md")
     with open(path, "w") as f:
         f.write(content)
-    return f"Markdown saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
@@ -50,7 +51,7 @@ def generate_python_file(filename: str, code: str) -> str:
     path = _make_path(filename, ".py")
     with open(path, "w") as f:
         f.write(code)
-    return f"Python file saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
@@ -72,7 +73,7 @@ def generate_pdf(filename: str, content: str) -> str:
     styles = getSampleStyleSheet()
     paragraphs = [Paragraph(line or "&nbsp;", styles["Normal"]) for line in content.splitlines()]
     doc.build(paragraphs)
-    return f"PDF saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
@@ -94,7 +95,7 @@ def generate_excel(filename: str, headers: list[str], rows: list[list]) -> str:
     for row in rows:
         ws.append(row)
     wb.save(path)
-    return f"Excel file saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
@@ -114,12 +115,12 @@ def generate_word_doc(filename: str, content: str) -> str:
     for line in content.splitlines():
         doc.add_paragraph(line)
     doc.save(path)
-    return f"Word document saved to {path}"
+    return f"FILE_SAVED:{path}"
 
 
 @tool
 def generate_notebook(filename: str, cells: list[str]) -> str:
-    """Generate a Jupyter Notebook (.ipynb) where each item in cells becomes a code cell. Returns the file path."""
+    """Generate a Jupyter Notebook (.ipynb) where each item in cells becomes a code cell."""
     if not filename:
         return "Error: filename cannot be empty."
     if not cells:
@@ -134,4 +135,4 @@ def generate_notebook(filename: str, cells: list[str]) -> str:
     nb.cells = [nbformat.v4.new_code_cell(cell) for cell in cells]
     with open(path, "w") as f:
         nbformat.write(nb, f)
-    return f"Jupyter notebook saved to {path}"
+    return f"FILE_SAVED:{path}"
