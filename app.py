@@ -46,7 +46,10 @@ def respond(message, history, thread_id, known_files):
         response += f"\n\n**File ready to download:** {', '.join(names)}  \nClick the filename in the Downloads panel below."
 
     updated_files = known_files + [p for p in new_paths if os.path.exists(p)]
-    history = history + [[message, response]]
+    history = history + [
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": response},
+    ]
     return history, updated_files, updated_files
 
 
@@ -72,7 +75,13 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    chatbot = gr.Chatbot(label="Chat", height=420)
+    gr.Markdown("**Examples** — click any to fill the message box:")
+    with gr.Row():
+        example_btns = [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[:4]]
+    with gr.Row():
+        example_btns += [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[4:]]
+
+    chatbot = gr.Chatbot(label="Chat", height=380)
 
     with gr.Row():
         msg_box = gr.Textbox(
@@ -82,12 +91,6 @@ with gr.Blocks(title="My First Agent") as demo:
             lines=1,
         )
         send_btn = gr.Button("Send", scale=1, variant="primary")
-
-    gr.Markdown("**Examples** — click any to fill the message box:")
-    with gr.Row():
-        example_btns = [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[:4]]
-    with gr.Row():
-        example_btns += [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[4:]]
 
     gr.Markdown("---\n### Downloads\nGenerated files appear here. Click a filename to download to your Downloads folder.")
     file_output = gr.File(
