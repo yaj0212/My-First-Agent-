@@ -57,7 +57,7 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    chatbot = gr.Chatbot(label="Chat", height=480, show_copy_button=True)
+    chatbot = gr.Chatbot(label="Chat", height=480)
 
     with gr.Row():
         msg_box = gr.Textbox(
