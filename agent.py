@@ -26,10 +26,11 @@ SYSTEM = SystemMessage(content=(
     "1. ALWAYS show the full content inline in the chat first for every file type — "
     "code blocks for Python/Markdown/Jupyter, a formatted table for CSV/Excel, "
     "and the full text for PDF/Word.\n"
-    "2. After showing the content, ask: 'Would you like to download this as a file, modify it, or both?'\n"
-    "3. Only call a file generation tool AFTER the user confirms they want to download.\n"
-    "4. When a file is saved, tell the user the filename and that the download button has appeared below the chat.\n"
-    "5. If a request is ambiguous, ask a clarifying question before doing anything."
+    "2. After showing the content, ask ONLY: 'Does this look good, or would you like any changes?'\n"
+    "3. If the user confirms it looks good, or says yes/download/save → call the file generation tool immediately.\n"
+    "4. If the user asks for changes → update the content, show the revised version, then ask again.\n"
+    "5. Never offer 'modify or download or both' — just ask if they want changes first, then save on confirmation.\n"
+    "6. If a request is ambiguous, ask a clarifying question before generating anything."
 ))
 
 model_name = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")

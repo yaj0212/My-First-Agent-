@@ -8,44 +8,38 @@ from agent import chat
 TEMP_DIR = os.path.join(tempfile.gettempdir(), "my-first-agent")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-FILE_SAVED_RE = re.compile(r"FILE_SAVED:(\S+)")
-
 EXAMPLES = [
-    "Write a Python script that prints the Fibonacci sequence",
-    "Generate a CSV with columns Name, Age, City and 3 sample rows",
-    "Create a Markdown README template for a Python project",
-    "Generate a PDF intro about AI agents",
-    "Create an Excel file tracking monthly expenses with 5 rows",
-    "Write a Word document with a simple cover letter template",
-    "Create a Jupyter notebook that imports pandas and prints Hello World",
+    "Write a Python script that prints Fibonacci",
+    "CSV: Name, Age, City — 3 rows",
+    "Markdown README for a Python project",
+    "PDF intro about AI agents",
+    "Excel: monthly expenses, 5 rows",
+    "Word doc cover letter template",
+    "Jupyter notebook: import pandas, print Hello World",
 ]
-
-
-def extract_files(text: str):
-    return FILE_SAVED_RE.findall(text)
-
-
-def clean_response(text: str) -> str:
-    return FILE_SAVED_RE.sub("", text).strip()
 
 
 def respond(message, history, thread_id, known_files):
     thread_id = (thread_id or "").strip() or "default"
     if not message or not message.strip():
         return history, known_files, known_files
-    try:
-        raw = chat(message, thread_id=thread_id)
-    except Exception as e:
-        raw = f"Error: {e}"
 
-    new_paths = extract_files(raw)
-    response = clean_response(raw)
+    # Detect new files by diffing the temp dir before and after
+    before = set(os.listdir(TEMP_DIR))
+    try:
+        response = chat(message, thread_id=thread_id)
+    except Exception as e:
+        response = f"Error: {e}"
+    after = set(os.listdir(TEMP_DIR))
+
+    new_filenames = after - before
+    new_paths = [os.path.join(TEMP_DIR, f) for f in new_filenames if os.path.exists(os.path.join(TEMP_DIR, f))]
 
     if new_paths:
         names = [os.path.basename(p) for p in new_paths]
-        response += f"\n\n**File ready to download:** {', '.join(names)}  \nClick the filename in the Downloads panel below."
+        response += f"\n\n**Ready to download:** {', '.join(names)} — scroll down to the Downloads section."
 
-    updated_files = known_files + [p for p in new_paths if os.path.exists(p)]
+    updated_files = known_files + new_paths
     history = history + [
         {"role": "user", "content": message},
         {"role": "assistant", "content": response},
@@ -57,12 +51,8 @@ def new_session(known_files):
     return [], str(uuid.uuid4())[:8], known_files
 
 
-def fill_example(example_text):
-    return example_text
-
-
 with gr.Blocks(title="My First Agent") as demo:
-    gr.Markdown("# My First Agent\nChat with your agent. Files are generated in chat first — download them when you're ready.")
+    gr.Markdown("# My First Agent\nChat with your agent. It shows content in chat first — download when you're happy with it.")
 
     file_state = gr.State([])
 
@@ -75,13 +65,11 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    gr.Markdown("**Examples** — click any to fill the message box:")
-    with gr.Row():
-        example_btns = [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[:4]]
-    with gr.Row():
-        example_btns += [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[4:]]
+    chatbot = gr.Chatbot(label="Chat", height=400)
 
-    chatbot = gr.Chatbot(label="Chat", height=380)
+    # Example chips between chatbot and input
+    with gr.Row():
+        example_btns = [gr.Button(ex, size="sm", variant="secondary", scale=1) for ex in EXAMPLES]
 
     with gr.Row():
         msg_box = gr.Textbox(
@@ -92,18 +80,18 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         send_btn = gr.Button("Send", scale=1, variant="primary")
 
-    gr.Markdown("---\n### Downloads\nGenerated files appear here. Click a filename to download to your Downloads folder.")
-    file_output = gr.File(
-        label="Generated files",
-        file_count="multiple",
-        interactive=False,
-    )
+    with gr.Accordion("Downloads", open=True):
+        gr.Markdown("Generated files appear here. Click a filename to download to your Downloads folder.")
+        file_output = gr.File(
+            label="Generated files",
+            file_count="multiple",
+            interactive=False,
+        )
 
-    # Wire example buttons to fill the message box
+    # Wire example buttons to fill message box
     for btn, ex in zip(example_btns, EXAMPLES):
         btn.click(fn=lambda t=ex: t, outputs=msg_box)
 
-    # Send on button click or Enter
     send_btn.click(
         fn=respond,
         inputs=[msg_box, chatbot, thread_input, file_state],
