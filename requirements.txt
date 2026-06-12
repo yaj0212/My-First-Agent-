@@ -8,3 +8,4 @@ reportlab
 python-docx
 openpyxl
 nbformat
+gradio
