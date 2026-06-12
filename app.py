@@ -8,8 +8,17 @@ from agent import chat
 TEMP_DIR = os.path.join(tempfile.gettempdir(), "my-first-agent")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# Parse FILE_SAVED: paths out of agent response
 FILE_SAVED_RE = re.compile(r"FILE_SAVED:(\S+)")
+
+EXAMPLES = [
+    "Write a Python script that prints the Fibonacci sequence",
+    "Generate a CSV with columns Name, Age, City and 3 sample rows",
+    "Create a Markdown README template for a Python project",
+    "Generate a PDF intro about AI agents",
+    "Create an Excel file tracking monthly expenses with 5 rows",
+    "Write a Word document with a simple cover letter template",
+    "Create a Jupyter notebook that imports pandas and prints Hello World",
+]
 
 
 def extract_files(text: str):
@@ -22,6 +31,8 @@ def clean_response(text: str) -> str:
 
 def respond(message, history, thread_id, known_files):
     thread_id = (thread_id or "").strip() or "default"
+    if not message or not message.strip():
+        return history, known_files, known_files
     try:
         raw = chat(message, thread_id=thread_id)
     except Exception as e:
@@ -32,7 +43,7 @@ def respond(message, history, thread_id, known_files):
 
     if new_paths:
         names = [os.path.basename(p) for p in new_paths]
-        response += f"\n\n**File ready to download:** {', '.join(names)}  \nClick the filename in the Download panel below."
+        response += f"\n\n**File ready to download:** {', '.join(names)}  \nClick the filename in the Downloads panel below."
 
     updated_files = known_files + [p for p in new_paths if os.path.exists(p)]
     history = history + [[message, response]]
@@ -41,6 +52,10 @@ def respond(message, history, thread_id, known_files):
 
 def new_session(known_files):
     return [], str(uuid.uuid4())[:8], known_files
+
+
+def fill_example(example_text):
+    return example_text
 
 
 with gr.Blocks(title="My First Agent") as demo:
@@ -57,37 +72,33 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    chatbot = gr.Chatbot(label="Chat", height=480)
+    chatbot = gr.Chatbot(label="Chat", height=420)
 
     with gr.Row():
         msg_box = gr.Textbox(
             placeholder="Ask me to generate any file, or just chat...",
-            label="",
+            label="Message",
             scale=5,
             lines=1,
         )
         send_btn = gr.Button("Send", scale=1, variant="primary")
 
-    gr.Examples(
-        examples=[
-            "Write a Python script that prints the Fibonacci sequence",
-            "Generate a CSV with columns Name, Age, City and 3 sample rows",
-            "Create a Markdown README template for a Python project",
-            "Generate a PDF with a short introduction about AI agents",
-            "Create an Excel file tracking monthly expenses with 5 rows",
-            "Write a Word document with a simple cover letter template",
-            "Create a Jupyter notebook that imports pandas and prints Hello World",
-        ],
-        inputs=msg_box,
-    )
+    gr.Markdown("**Examples** — click any to fill the message box:")
+    with gr.Row():
+        example_btns = [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[:4]]
+    with gr.Row():
+        example_btns += [gr.Button(ex, size="sm", variant="secondary") for ex in EXAMPLES[4:]]
 
-    gr.Markdown("### Downloads")
-    gr.Markdown("Generated files appear here. Click a filename to download it to your Downloads folder.")
+    gr.Markdown("---\n### Downloads\nGenerated files appear here. Click a filename to download to your Downloads folder.")
     file_output = gr.File(
         label="Generated files",
         file_count="multiple",
         interactive=False,
     )
+
+    # Wire example buttons to fill the message box
+    for btn, ex in zip(example_btns, EXAMPLES):
+        btn.click(fn=lambda t=ex: t, outputs=msg_box)
 
     # Send on button click or Enter
     send_btn.click(
