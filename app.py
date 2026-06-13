@@ -53,7 +53,11 @@ def new_session(known_files):
             gr.update(visible=True), gr.update(visible=False))
 
 
-with gr.Blocks(title="My First Agent") as demo:
+with gr.Blocks(title="My First Agent", css="""
+    #welcome-group { background: white !important; border: 1px solid #e5e7eb !important; border-radius: 8px; }
+    #welcome-group button { background: #f0f7ff !important; border: 1px solid #93c5fd !important; color: #1d4ed8 !important; font-weight: 500; }
+    #welcome-group button:hover { background: #dbeafe !important; }
+""") as demo:
     gr.Markdown("# My First Agent\nChat with your agent. It shows content in chat first — download when you're happy with it.")
 
     file_state = gr.State([])
@@ -68,7 +72,7 @@ with gr.Blocks(title="My First Agent") as demo:
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
     # Welcome panel — replaces chatbot when session is empty
-    with gr.Group(visible=True) as welcome_panel:
+    with gr.Group(visible=True, elem_id="welcome-group") as welcome_panel:
         gr.HTML("""
         <div style="text-align:center; padding: 48px 20px 24px; color:#333;">
           <div style="font-size:2.2rem; margin-bottom:12px;">🤖</div>
