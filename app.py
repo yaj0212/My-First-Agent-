@@ -54,9 +54,25 @@ def new_session(known_files):
 
 
 with gr.Blocks(title="My First Agent", css="""
-    #welcome-group { background: white !important; border: 1px solid #e5e7eb !important; border-radius: 8px; }
-    #welcome-group button { background: #f0f7ff !important; border: 1px solid #93c5fd !important; color: #1d4ed8 !important; font-weight: 500; }
-    #welcome-group button:hover { background: #dbeafe !important; }
+    #welcome-group {
+        background: white !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+    }
+    #welcome-group > div { background: white !important; }
+    #welcome-group button {
+        background: white !important;
+        border: 1px solid #d1d5db !important;
+        color: #374151 !important;
+        border-radius: 999px !important;
+        font-weight: 400 !important;
+        box-shadow: none !important;
+    }
+    #welcome-group button:hover {
+        background: #f9fafb !important;
+        border-color: #9ca3af !important;
+    }
 """) as demo:
     gr.Markdown("# My First Agent\nChat with your agent. It shows content in chat first — download when you're happy with it.")
 
