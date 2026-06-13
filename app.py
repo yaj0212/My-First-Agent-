@@ -22,7 +22,7 @@ def respond(message, history, thread_id, known_files):
     thread_id = (thread_id or "").strip() or "default"
     if not message or not message.strip():
         return (history, known_files, known_files,
-                gr.update(visible=False), gr.update(visible=True))
+                gr.update(visible=True), gr.update(visible=False))
 
     before = set(os.listdir(TEMP_DIR))
     try:
@@ -44,13 +44,11 @@ def respond(message, history, thread_id, known_files):
         {"role": "user", "content": message},
         {"role": "assistant", "content": response},
     ]
-    # Hide welcome panel, show chatbot
     return (history, updated_files, updated_files,
             gr.update(visible=False), gr.update(visible=True))
 
 
 def new_session(known_files):
-    # Show welcome panel, hide chatbot
     return ([], str(uuid.uuid4())[:8], known_files,
             gr.update(visible=True), gr.update(visible=False))
 
@@ -69,21 +67,20 @@ with gr.Blocks(title="My First Agent") as demo:
         )
         new_btn = gr.Button("New Session", scale=1, variant="secondary")
 
-    # Welcome panel — shown when chat is empty
-    with gr.Column(visible=True) as welcome_panel:
+    # Welcome panel — replaces chatbot when session is empty
+    with gr.Group(visible=True) as welcome_panel:
         gr.HTML("""
-        <div style="border:1px solid #e5e7eb; border-radius:8px; height:420px;
-                    display:flex; flex-direction:column; align-items:center;
-                    justify-content:center; gap:20px; background:#fff; padding:32px;">
-          <div style="font-size:2rem;">🤖</div>
-          <div style="font-size:1.15rem; font-weight:600; color:#111;">What would you like to create?</div>
-          <div style="font-size:0.85rem; color:#888;">Click an option to get started</div>
+        <div style="text-align:center; padding: 48px 20px 24px; color:#333;">
+          <div style="font-size:2.2rem; margin-bottom:12px;">🤖</div>
+          <div style="font-size:1.1rem; font-weight:600; margin-bottom:6px;">What would you like to create?</div>
+          <div style="font-size:0.82rem; color:#999;">Click an option to get started, or type your own request below</div>
         </div>
         """)
         with gr.Row():
             btns = [gr.Button(label, variant="secondary", scale=1) for label, _ in EXAMPLES]
+        gr.HTML("<div style='height:48px'></div>")
 
-    # Chatbot — hidden until first message
+    # Chatbot — shown only after first message
     chatbot = gr.Chatbot(label="Chat", height=420, visible=False)
 
     with gr.Row():
@@ -103,7 +100,7 @@ with gr.Blocks(title="My First Agent") as demo:
             interactive=False,
         )
 
-    # Example buttons fill the message box and auto-submit
+    # Example buttons: fill message box then auto-submit
     for btn, (_, prompt) in zip(btns, EXAMPLES):
         btn.click(fn=lambda p=prompt: p, outputs=msg_box).then(
             fn=respond,
